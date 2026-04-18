@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Upload as UploadIcon, FileText, X, CheckCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Upload = () => {
   const [dragActive, setDragActive] = useState(false);
@@ -13,6 +15,8 @@ const Upload = () => {
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const inputRef = useRef(null);
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -61,20 +65,28 @@ const Upload = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file || !title) return;
+    if (!currentUser) return alert("You must be logged in to upload notes!");
     
     setIsUploading(true);
     
     try {
-      const payload = {
-        title: title,
-        description: description,
-        subject: category,
-        tags: tags.split(',').map(tag => tag.trim()), // convert comma separated to array
-        file_url: 'dummy_url_for_now.pdf', // File uploads aren't implemented in the backend yet
-        uploaded_by: 'Salina' // Dummy user
-      };
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('subject', category);
+      formData.append('tags', JSON.stringify(tags.split(',').map(tag => tag.trim())));
+      formData.append('uploaded_by', currentUser.name || currentUser.email);
+      formData.append('uploaded_by_id', currentUser._id);
+      formData.append('file', file); // Multer expects 'file'
+
+      const token = localStorage.getItem('token');
       
-      await axios.post('http://localhost:5000/api/notes', payload);
+      await axios.post('http://localhost:5000/api/notes', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       setUploadSuccess(true);
       // Reset form
@@ -85,10 +97,12 @@ const Upload = () => {
         setTags('');
         setCategory('');
         setUploadSuccess(false);
-      }, 3000);
+        navigate('/'); // Redirect to home
+      }, 2000);
       
     } catch (error) {
       console.error("Upload failed", error);
+      alert("Error uploading note.");
     } finally {
       setIsUploading(false);
     }

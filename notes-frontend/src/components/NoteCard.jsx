@@ -30,9 +30,9 @@ const NoteCard = ({ note }) => {
             <CheckCircle2 className="w-3.5 h-3.5 text-gray-400" />
           </Link>
           <div className="text-sm text-text-secondary flex items-center gap-1 mt-0.5">
-            <span>{note.views ? (note.views.toLocaleString() + ' views') : '1.2K views'}</span>
+            <span>{note.views ? (note.views.toLocaleString() + ' views') : '0 views'}</span>
             <span className="text-[10px]">•</span>
-            <span>{note.createdAt ? new Date(note.createdAt).toLocaleDateString() : '2 days ago'}</span>
+            <span>{note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'recent'}</span>
           </div>
           {note.subject && (
             <div className="mt-1 flex flex-wrap gap-1">

@@ -1,7 +1,25 @@
-import { Link } from 'react-router-dom';
-import { Search, Menu, Upload, Moon, Sun, UserCircle, Bell } from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Menu, Upload, Moon, Sun, UserCircle, Bell, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const Navbar = ({ toggleTheme, isDarkMode, toggleSidebar }) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 h-16 bg-surface-color border-b border-border-color z-50 flex items-center px-4 justify-between transition-colors duration-300">
       
@@ -23,8 +41,14 @@ const Navbar = ({ toggleTheme, isDarkMode, toggleSidebar }) => {
             type="text" 
             placeholder="Search for notes, subjects, or tags..." 
             className="w-full bg-transparent px-4 py-2 outline-none text-text-primary"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
-          <button className="px-5 py-2 bg-black/5 dark:bg-white/5 border-l border-border-color hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+          <button 
+            onClick={handleSearch}
+            className="px-5 py-2 bg-black/5 dark:bg-white/5 border-l border-border-color hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+          >
             <Search className="w-5 h-5 text-text-secondary" />
           </button>
         </div>
@@ -48,9 +72,20 @@ const Navbar = ({ toggleTheme, isDarkMode, toggleSidebar }) => {
           <Bell className="w-6 h-6 text-text-primary" />
         </button>
 
-        <Link to="/profile/me" className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors ml-2">
-          <UserCircle className="w-8 h-8 text-blue-500" />
-        </Link>
+        {currentUser ? (
+          <div className="flex items-center gap-2">
+            <Link to={`/profile/${currentUser._id}`} className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors ml-2 flex items-center justify-center w-8 h-8 bg-blue-600 text-white font-bold text-sm">
+              {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+            </Link>
+            <button onClick={logout} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors hidden sm:block text-text-primary" title="Logout">
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        ) : (
+          <Link to="/login" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-full transition-colors text-sm ml-2">
+            Sign In
+          </Link>
+        )}
       </div>
 
     </nav>

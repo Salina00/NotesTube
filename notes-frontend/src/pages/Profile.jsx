@@ -1,35 +1,59 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { UserCircle, Settings, MapPin, Link as LinkIcon, Calendar } from 'lucide-react';
 import NoteCard from '../components/NoteCard';
 
 const Profile = () => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState('notes');
+  const { currentUser } = useAuth();
+  
+  const [userProfile, setUserProfile] = useState(null);
+  const [userNotes, setUserNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Dummy user data
-  const user = {
-    name: 'Salina',
-    handle: '@salinastudies',
-    subscribers: 4200,
-    bio: 'Computer Science student sharing notes and study materials. Passionate about web development and AI.',
-    location: 'New York, USA',
-    website: 'https://salina.dev',
-    joinedDate: 'Joined April 2024',
-    avatarLetter: 'S'
-  };
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        setLoading(true);
+        // Determine the user ID to fetch
+        const targetUserId = (id === 'me' && currentUser) ? currentUser._id : id;
+        
+        if (!targetUserId) {
+          setLoading(false);
+          return;
+        }
 
-  // Dummy notes for profile
-  const dummyNotes = [
-    { id: 5, title: 'Database Management Systems Full Course', uploaded_by: 'Salina', subject: 'Engineering', views: 4300, createdAt: new Date(Date.now() - 86400000*1) },
-    { id: 9, title: 'React Performance Optimization Rules', uploaded_by: 'Salina', subject: 'Programming', views: 1250, createdAt: new Date(Date.now() - 86400000*4) },
-    { id: 10, title: 'Operating Systems - Processes and Threads', uploaded_by: 'Salina', subject: 'Engineering', views: 2100, createdAt: new Date(Date.now() - 86400000*8) },
-  ];
+        const [userRes, notesRes] = await Promise.all([
+          axios.get(`http://localhost:5000/api/users/user/${targetUserId}`),
+          axios.get(`http://localhost:5000/api/notes/user/${targetUserId}`)
+        ]);
 
-  const dummyLiked = [
-    { id: 1, title: 'Introduction to React Hooks and Context API', uploaded_by: 'CodeMaster', subject: 'Programming', views: 15400, createdAt: new Date(Date.now() - 86400000*2) },
-    { id: 3, title: 'Machine Learning Algorithms Cheatsheet', uploaded_by: 'DataNerd', subject: 'Science', views: 25000, createdAt: new Date() },
-  ];
+        if (userRes.data) {
+          setUserProfile(userRes.data);
+        }
+        if (notesRes.data) {
+          setUserNotes(notesRes.data);
+        }
+      } catch (err) {
+        console.error("Error fetching profile", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, [id, currentUser]);
+
+  if (loading) {
+    return <div className="p-10 text-center">Loading profile...</div>;
+  }
+
+  if (!userProfile) {
+    return <div className="p-10 text-center">User not found</div>;
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto pb-10">
@@ -38,7 +62,7 @@ const Profile = () => {
       <div className="w-full h-40 sm:h-52 md:h-64 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-800 relative mb-16 sm:mb-20">
         <div className="absolute -bottom-12 sm:-bottom-16 left-6 sm:left-10">
           <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-bg-color bg-blue-500 flex items-center justify-center text-white text-4xl sm:text-6xl font-bold">
-            {user.avatarLetter}
+            {(userProfile.name || userProfile.email || "U").charAt(0).toUpperCase()}
           </div>
         </div>
       </div>
@@ -46,21 +70,21 @@ const Profile = () => {
       {/* Profile Info */}
       <div className="px-4 sm:px-10 flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">{user.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">{userProfile.name || 'Anonymous User'}</h1>
           <div className="flex flex-wrap items-center gap-2 mt-1 text-text-secondary text-sm">
-            <span className="font-medium text-text-primary">{user.handle}</span>
+            <span className="font-medium text-text-primary">@{userProfile.email?.split('@')[0] || 'user'}</span>
             <span>•</span>
-            <span>{user.subscribers.toLocaleString()} subscribers</span>
+            <span>{(userProfile.subscribersCount || userProfile.followers?.length || 0).toLocaleString()} subscribers</span>
             <span>•</span>
-            <span>28 notes</span>
+            <span>{userNotes.length} notes</span>
           </div>
           <p className="mt-4 text-text-primary max-w-2xl text-sm leading-relaxed">
-            {user.bio}
+            {userProfile.bio || 'No bio available.'}
           </p>
           <div className="mt-3 flex flex-wrap gap-4 text-xs text-text-secondary">
-            <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {user.location}</span>
-            <span className="flex items-center gap-1"><LinkIcon className="w-4 h-4" /> <a href={user.website} className="text-blue-500 hover:underline">Website</a></span>
-            <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {user.joinedDate}</span>
+            {userProfile.location && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {userProfile.location}</span>}
+            {userProfile.website && <span className="flex items-center gap-1"><LinkIcon className="w-4 h-4" /> <a href={userProfile.website} className="text-blue-500 hover:underline">Website</a></span>}
+            <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> Joined {new Date(userProfile.createdAt || Date.now()).toLocaleDateString()}</span>
           </div>
         </div>
 
@@ -107,9 +131,11 @@ const Profile = () => {
           <div>
             <h2 className="text-lg font-semibold text-text-primary mb-4">Uploaded Notes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-x-4 sm:gap-y-8">
-              {dummyNotes.map(note => (
-                <NoteCard key={note.id} note={note} />
-              ))}
+              {userNotes.length > 0 ? userNotes.map(note => (
+                <NoteCard key={note._id} note={note} />
+              )) : (
+                <div className="text-sm text-text-secondary">No notes uploaded yet.</div>
+              )}
             </div>
           </div>
         )}
@@ -118,9 +144,11 @@ const Profile = () => {
           <div>
             <h2 className="text-lg font-semibold text-text-primary mb-4">Liked Notes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-x-4 sm:gap-y-8">
-              {dummyLiked.map(note => (
-                <NoteCard key={note.id} note={note} />
-              ))}
+              {userProfile.savedNotes && userProfile.savedNotes.length > 0 ? userProfile.savedNotes.map(note => (
+                <NoteCard key={note._id || note} note={note.title ? note : { ...note, _id: note }} />
+              )) : (
+                <div className="text-sm text-text-secondary">No saved notes yet.</div>
+              )}
             </div>
           </div>
         )}
@@ -135,18 +163,23 @@ const Profile = () => {
           <div className="max-w-3xl flex flex-col sm:flex-row gap-10">
             <div className="flex-1">
               <h2 className="font-semibold text-lg text-text-primary mb-2">Description</h2>
-              <p className="text-sm text-text-primary whitespace-pre-line">{user.bio}</p>
+              <p className="text-sm text-text-primary whitespace-pre-line">{userProfile.bio || 'No description available for this user.'}</p>
               
-              <div className="mt-8 border-t border-border-color pt-6">
-                <h2 className="font-semibold text-lg text-text-primary mb-3">Links</h2>
-                <a href={user.website} className="text-blue-500 hover:underline text-sm font-medium">{user.website}</a>
-              </div>
+              {userProfile.website && (
+                <div className="mt-8 border-t border-border-color pt-6">
+                  <h2 className="font-semibold text-lg text-text-primary mb-3">Links</h2>
+                  <a href={userProfile.website} className="text-blue-500 hover:underline text-sm font-medium">{userProfile.website}</a>
+                </div>
+              )}
             </div>
             
             <div className="sm:w-64 border-t sm:border-t-0 sm:border-l border-border-color pt-6 sm:pt-0 sm:pl-6 space-y-4">
               <h2 className="font-semibold text-lg text-text-primary">Stats</h2>
-              <div className="text-sm border-b border-border-color pb-2">Joined {user.joinedDate.replace('Joined', '')}</div>
-              <div className="text-sm border-b border-border-color pb-2">38,204 views</div>
+              <div className="text-sm border-b border-border-color pb-2">Joined {new Date(userProfile.createdAt || Date.now()).toLocaleDateString()}</div>
+              {/* Could sum views from userNotes if needed */}
+              <div className="text-sm border-b border-border-color pb-2">
+                {userNotes.reduce((total, n) => total + (n.views || 0), 0).toLocaleString()} views
+              </div>
             </div>
           </div>
         )}

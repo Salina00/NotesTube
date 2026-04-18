@@ -11,6 +11,7 @@ const Sidebar = ({ isOpen }) => {
   ];
 
   const secondaryLinks = [
+    { name: 'Saved Notes', icon: BookOpen, path: '/saved' },
     { name: 'History', icon: History, path: '/history' },
     { name: 'Liked Notes', icon: ThumbsUp, path: '/liked' },
   ];

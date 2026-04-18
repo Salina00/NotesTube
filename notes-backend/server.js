@@ -12,6 +12,7 @@ connectDB();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use("/uploads", express.static("uploads")); // Serve static files
 
 // ✅ ADD THESE LINES
 app.use("/api/users", require("./routes/userRoutes"));
